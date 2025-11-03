@@ -1,0 +1,15 @@
+{
+  "name": "project-root",
+  "version": "1.0.0",
+  "description": "Root package.json to help Railway detect Node",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "cd backend && tsx src/index.ts",
+    "dev": "cd backend && tsx src/index.ts",
+    "server": "cd backend && nodemon --exec tsx src/index.ts",
+    "postinstall": "cd backend && prisma generate"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
