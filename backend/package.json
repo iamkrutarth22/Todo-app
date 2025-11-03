@@ -7,6 +7,7 @@
   "scripts": {
     "server": "nodemon --exec tsx src/index.ts",
     "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "prisma generate"
   },
