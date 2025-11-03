@@ -5,13 +5,15 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-  "build": "prisma generate",
-  "start": "prisma migrate deploy && tsx src/index.ts",
   "server": "nodemon --exec tsx src/index.ts",
   "dev": "tsx src/index.ts",
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "postinstall": "prisma generate"
-},
+  "start": "tsx src/index.ts",
+  "postinstall": "prisma generate",
+  "migrate:dev": "prisma migrate dev --name init", 
+  "migrate:deploy": "prisma migrate deploy",
+  "db:push": "prisma db push"
+}
+,
   "keywords": [],
   "author": "",
   "license": "ISC",
