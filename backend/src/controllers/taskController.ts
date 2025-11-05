@@ -24,10 +24,6 @@ export const getTasks = async (
       },
     });
 
-    const totalTasks = await prismaClient.task.count({
-      where: { userId },
-    });
-
     res.status(200).json({
       message: "Tasks fetched successfully",
       tasks,
@@ -66,15 +62,6 @@ export const createTask = async (
           connect: { id: userId }, // assuming user.id is Int
         },
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
     });
 
     return res.status(201).json({
@@ -103,6 +90,7 @@ export const completeTask = async (
   next: NextFunction
 ) => {
   const taskId = Number(req.params.taskId);
+  const userId = Number(req.userId);
 
   if (!taskId) {
     console.log(taskId);
@@ -140,30 +128,37 @@ export const updateTask = async (
   next: NextFunction
 ) => {
   const taskId = Number(req.params.taskId);
+  const userId = Number(req.userId);
+
 
   if (!taskId || isNaN(taskId)) {
     return res.status(400).json({ message: "Invalid task ID" });
   }
 
-  const { title, description } = req.body;
+  const { title, description ,isCompleted } = req.body;
 
-  if (title === undefined && description === undefined) {
-    return res.status(400).json({
-      message: "Nothing to update. Provide title or description.",
-    });
-  }
+  // if (title === undefined && description === undefined && isCompleted) {
+  //   return res.status(400).json({
+  //     message: "Nothing to update. Provide title or description.",
+  //   });
+  // }
 
   try {
     const taskExists = await prismaClient.task.findUnique({
       where: { id: taskId },
-      select: { id: true },
     });
 
+   
     if (!taskExists) {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    const updateData: { title?: string; description?: string | null } = {};
+    if(taskExists.userId !==userId){
+      return res.status(403).json({ message: "Unauthorized: Not your task" });
+    }
+
+
+    const updateData: { title?: string; description?: string | null ; isCompleted?:boolean} = {};
 
     if (title !== undefined) {
       const trimmed = title.trim();
@@ -178,14 +173,16 @@ export const updateTask = async (
       updateData.description = trimmed === "" ? null : trimmed;
     }
 
+    if (isCompleted !== undefined) {
+      if (typeof isCompleted !== "boolean") {
+        return res.status(400).json({ message: "isCompleted must be a boolean" });
+      }
+      updateData.isCompleted = isCompleted;
+    }
+
     const updatedTask = await prismaClient.task.update({
       where: { id: taskId },
       data: updateData,
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-      },
     });
 
     return res.status(200).json({
@@ -204,6 +201,7 @@ export const deleteTask = async (
   next: NextFunction
 ) => {
   const taskId = Number(req.params.taskId);
+  const userId= Number(req.userId)
 
   if (!taskId || isNaN(taskId)) {
     return res.status(400).json({ message: "Invalid task ID" });
@@ -218,6 +216,10 @@ export const deleteTask = async (
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+    if(task.userId !==userId){
+      return res.status(403).json({ message: "Unauthorized: Not your task" });
+    }
+
 
     await prismaClient.task.delete({
       where: { id: taskId },

@@ -24,26 +24,25 @@ export const login = async (req: Request, res: Response) => {
   }
 
   try {
-    // Find user
     const user = await prisma.user.findUnique({
       where: { email: trimmedEmail },
     });
 
     if (!user) {
-      return res.status(401).json({
-        message: "Invalid email or password",
+      return res.status(404).json({
+        code: "USER_NOT_FOUND",
+        message: "Email is not registered.",
       });
     }
 
-    // Verify password
     const passwordMatch = await bcrypt.compare(trimmedPassword, user.password);
     if (!passwordMatch) {
       return res.status(401).json({
-        message: "Invalid email or password",
+        code: "INVALID_CREDENTIALS",
+        message: "Incorrect password.",
       });
     }
 
-    // Generate access token (1 hour)
     const accessToken = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET!,
@@ -56,12 +55,15 @@ export const login = async (req: Request, res: Response) => {
       accessToken,
       user: {
         userid: userWithoutPassword.id,
-        usernamename: userWithoutPassword.name,
+        username: userWithoutPassword.name,
         email: userWithoutPassword.email,
       },
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "An unexpected error occurred. Please try again later.",
+    });
   }
 };

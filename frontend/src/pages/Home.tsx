@@ -1,43 +1,36 @@
-import { useEffect, useState } from "react";
-import type { Task } from "../models/Task";
+import { useEffect } from "react";
 import { getTasks } from "../services/api";
-
+import { Outlet } from "react-router-dom";
+import Header from "../components/Header";
+import { useDispatch} from "react-redux";
+import { tasksActions } from "../store/tasks/taskSlice";
 const Home = () => {
-    const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
+  const dispatch=useDispatch()
 
- useEffect(() => {
-   const fetchTasks = async () => {
+  useEffect(() => {
+    const fetchTasks = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        const data = await getTasks(); // Axios with token auto-added
-        setTasks(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load tasks");
-      } finally {
-        setLoading(false);
+        const data = await getTasks();
+        dispatch(tasksActions.setTasks(data.tasks));
+      } catch (error) {
+        console.error("Failed to load tasks:", error);
       }
     };
 
     fetchTasks();
-  }, []);
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p className="text-red-500">Error: {error}</p>;
+  }, [dispatch]);
+  
 
   return (
-    <div>
-      {tasks.map((task) => (
-        <div key={task.id}>
-          <h3>{task.title}</h3>
-          <p>{task.isCompleted ? "Completed" : "Pending"}</p>
-        </div>
-      ))}
-    </div>
+    <>
+      <Header />
+      <div className=" py-12 md:mx-40 mx-10">
+      <Outlet />
+      </div>
+    </>
   );
-}
+};
 
-export default Home
+export default Home;
+

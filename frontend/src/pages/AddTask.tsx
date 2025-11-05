@@ -1,12 +1,12 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { Check, X } from "lucide-react";
-import type { ITask } from "../models/Task";
-import { deleteTask, patchTask } from "../services/api";
+import { X } from "lucide-react";
 import { tasksActions } from "../store/tasks/taskSlice";
+import { addNewTask } from "../services/api";
 import { isAxiosError } from "axios";
+import { authActions } from "../store/auth/authSlice";
 
 const validationSchema = Yup.object({
   title: Yup.string()
@@ -14,38 +14,31 @@ const validationSchema = Yup.object({
     .min(1, "Title too short")
     .max(100, "Title too long"),
   description: Yup.string()
-    .nullable()
+    .required("Description is required")
     .max(190, "Description must be 190 characters or less"),
 });
 
-const Task = () => {
-  const { taskid } = useParams<{ taskid: string }>();
+const AddTask = () => {
   const navigate = useNavigate();
-
   const dispatch = useDispatch();
-
-  const task = useSelector((state: { tasks: ITask[] }) =>
-    state.tasks.find((t) => t.id === Number(taskid))
-  );
 
   const formik = useFormik({
     initialValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      isCompleted: task?.isCompleted || false,
+      title: "",
+      description: "",
+      isCompleted: false,
     },
     validationSchema,
-    enableReinitialize: true, // Important: update form when task loads
-    onSubmit: async (values, { setSubmitting, setFieldError }) => {
+    onSubmit: async (values, { setSubmitting, setFieldError, resetForm }) => {
       try {
-        const res = await patchTask(task!.id, {
+        const res = await addNewTask({
           title: values.title,
-          description: values.description || null,
-          isCompleted: values.isCompleted,
+          description: values.description,
         });
 
-        // Success
-        dispatch(tasksActions.updateTask(res.task));
+        dispatch(tasksActions.addTask(res.task));
+        resetForm();
+
         navigate("/");
       } catch (error: unknown) {
         if (isAxiosError(error)) {
@@ -55,17 +48,12 @@ const Task = () => {
             setFieldError("title", err.message);
           } else if (err?.message?.includes("Description")) {
             setFieldError("description", err.message);
-          } else if (error.response?.status === 403) {
-            alert("You can only update your own tasks");
-          } else if (error.response?.status === 404) {
-            alert("Task not found");
           } else {
-            console.error(error);
-            alert(err?.message || "Update failed");
+            alert(err?.message || "Failed to add task");
           }
         } else {
-          console.error(error);
           alert("An unexpected error occurred");
+          dispatch(authActions.logout())
         }
       } finally {
         setSubmitting(false);
@@ -73,28 +61,8 @@ const Task = () => {
     },
   });
 
-  const handleDelete = async () => {
-    if (!confirm("Delete this task?")) return;
-
-    try {
-      const res = await deleteTask(Number(taskid));
-      dispatch(tasksActions.deleteTask(res.deletedTaskId));
-      navigate("/");
-    } catch {
-      alert("Failed to delete");
-    }
-  };
-
-  if (!task) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white ">
-        <p className="text-xl">Task not found</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex-col items-center justify-center">
       <div className=" w-full flex justify-end  ">
         <button
           type="button"
@@ -106,26 +74,11 @@ const Task = () => {
       </div>
       <form
         onSubmit={formik.handleSubmit}
-        className="w-full max-w-2xl space-y-6 flex justify-center  space-x-4"
+        className="w-full max-w-2xl space-y-6 flex justify-center space-x-4"
       >
-        <div className="flex flex-col  items-center  gap-2 ">
-          <span className="text-sm font-medium ">FINISH</span>
-          <button
-            type="button"
-            onClick={() =>
-              formik.setFieldValue("isCompleted", !formik.values.isCompleted)
-            }
-            className={`w-12 h-12 rounded-full flex text-black  items-center justify-center ${
-              formik.values.isCompleted ? " bg-success" : "bg-white "
-            }`}
-          >
-            <Check />
-          </button>
-        </div>
-
-        <div className="w-[300px] sm:w-[400px] md:[500px]  flex flex-col space-y-6">
+        <div className="w-[300px] sm:w-[400px] md:[500px] flex flex-col space-y-6">
           <div>
-            <label className="block text-sm font-medium  mb-1 text-center">
+            <label className="block text-sm font-medium mb-1 text-center">
               TITLE
             </label>
             <input
@@ -143,8 +96,9 @@ const Task = () => {
             ) : null}
           </div>
 
+          {/* Description */}
           <div>
-            <label className="block text-sm font-medium  mb-2 text-center">
+            <label className="block text-sm font-medium mb-2 text-center">
               DESCRIPTION
             </label>
             <textarea
@@ -173,17 +127,17 @@ const Task = () => {
             <button
               type="submit"
               disabled={formik.isSubmitting}
-              className="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-3 rounded-lg cursor-pointer "
+              className="w-full bg-primary hover:bg-blue-700 text-white font-semibold py-3 rounded-lg cursor-pointer"
             >
-              {formik.isSubmitting ? "UPDATING..." : "UPDATE"}
+              {formik.isSubmitting ? "ADDING..." : "ADD"}
             </button>
 
             <button
               type="button"
-              onClick={handleDelete}
-              className="w-full bg-danger hover:bg-red-700 text-white font-semibold py-3 rounded-lg cursor-pointer"
+              onClick={() => navigate("/")}
+              className="w-full bg-secondary  text-black font-semibold py-3 rounded-lg cursor-pointer"
             >
-              DELETE
+              CANCEL
             </button>
           </div>
         </div>
@@ -192,4 +146,4 @@ const Task = () => {
   );
 };
 
-export default Task;
+export default AddTask;
