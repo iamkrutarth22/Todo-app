@@ -15,11 +15,9 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    console.log(API_URL)
      const state = store.getState();
     const token = (state.auth as IAuth)?.accessToken;
 
-    // List of endpoints that don't need token
     const publicEndpoints = ['/login', '/signup'];
 
     const url = config.url || '';
@@ -37,7 +35,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor (optional: handle 401, refresh token, etc.)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
